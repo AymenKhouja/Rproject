@@ -1,0 +1,270 @@
+---
+title: "Progress of COVID-19 vaccinations in Tunisia"
+author: "Aymen Khouja"
+date: "13/12/2021"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    df_print: paged
+  pdf_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set()
+```
+```{r, message = FALSE, warning = FALSE}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(knitr)
+
+
+
+country_vaccinations <- read_csv("C:/Users/aymen/OneDrive/Bureau/Projet R/country_vaccinations.csv")
+
+
+#filtrate the vaccinations for just Tunisia
+
+tunisia_vaccinations_list <- country_vaccinations %>%
+  filter(country=="Tunisia" )
+
+tunisia_vaccinations <- as.data.frame(tunisia_vaccinations_list)
+tunisia_vaccinations$date <-as.Date(tunisia_vaccinations$date)
+
+
+```
+## Abstract
+This study was done in light of the vaccination efforts against COVID-19 and has the goal of tracking the progress of vaccinations in TUNISIA, observe the vaccinations time series, the percentage of the vaccinated population and compare the progress to that of neighbouring countries and big powers. 
+
+## Introduction 
+Coronavirus disease (COVID-19) is an infectious disease caused by the SARS-CoV-2 virus that has spread throughout the whole world and continued to cause problems and be a nuisance to world leaders and civilians for a long period of time. While Vaccines that combat this deadly disease are finally available, the progress to completely nullify the virus is still in progress.
+Vaccinations against COVID-19 in Tunisia started on march 13, 2021 when the country already had 8,359 deaths from the disease. As of the time of this analysis, around 6 millions had been vaccinated. 
+
+## Total number of vaccinations over time
+
+
+
+```{r total-number-of-vaccinations,   fig.align="center", out.width="100%"}
+
+tunisia_vaccinations$people_vaccinated_by_million=round((tunisia_vaccinations$people_vaccinated/1000000),digits=3)
+tunisia_vaccinations$people_fully_vaccinated_by_million=round((tunisia_vaccinations$people_fully_vaccinated/1000000),digits=3)
+
+p <- ggplot(tunisia_vaccinations,aes(date,people_vaccinated_by_million)) +
+  geom_line(data=tunisia_vaccinations[!is.na(tunisia_vaccinations$people_vaccinated_by_million),], color="green", lwd = 1.5) +
+  theme_classic() +
+  geom_ribbon(data=tunisia_vaccinations[!is.na(tunisia_vaccinations$people_vaccinated_by_million),],aes(ymin = 0, ymax = people_vaccinated_by_million ), fill = "#DAF7A6") +
+  scale_y_discrete(limits = c("1M", "2M", "3M", "4M","5M","6M") ) +
+  scale_x_continuous(limits=c(as.Date("2021-03-12"),as.Date("2021-12-30")), breaks = c(as.Date("2021-04-17"),as.Date("2021-05-28"),as.Date("2021-07-08"),as.Date("2021-08-18"),as.Date("2021-09-28"),as.Date("2021-11-08"),as.Date("2021-12-28")))  +
+  ylab("Number of people vaccinated")
+
+p1 <- ggplot(tunisia_vaccinations,aes(date,people_fully_vaccinated_by_million)) +
+  geom_line(data=tunisia_vaccinations[!is.na(tunisia_vaccinations$people_fully_vaccinated_by_million),], color="red", lwd = 1.5) +
+  theme_classic() +
+  geom_ribbon(data=tunisia_vaccinations[!is.na(tunisia_vaccinations$people_fully_vaccinated_by_million),],aes(ymin = 0, ymax = people_fully_vaccinated_by_million ), fill = "pink") +
+  scale_y_discrete(limits = c("1M", "2M", "3M", "4M","5M","6M") ) +
+  scale_x_continuous(limits=c(as.Date("2021-03-12"),as.Date("2021-12-30")), breaks = c(as.Date("2021-04-17"),as.Date("2021-05-28"),as.Date("2021-07-08"),as.Date("2021-08-18"),as.Date("2021-09-28"),as.Date("2021-11-08"),as.Date("2021-12-28")))  +
+  ylab("Number of people fully vaccinated")
+
+
+grid.arrange(p, p1, nrow = 2)
+```
+
+
+## Percentage of the vaccinated Tunisian Population 
+According to [worldometers](https://www.worldometers.info) the tunisian population is over 11 millions, the charts below shows:
+
+- What percentage among them are fully vaccinated.
+- What percentage among them are vaccinated; be it one dose or
+both.
+
+```{r, out.width="70%", out.height="70%", fig.align="center", warning = FALSE}
+
+
+fully_vaccinated_percentage <- max(tunisia_vaccinations$people_fully_vaccinated_per_hundred, na.rm= TRUE)
+
+notfully_vaccinated_percentage <-round(100-fully_vaccinated_percentage, digits=2)
+data <- data.frame(group=c("Fully vaccinated","Not fully vaccinated"), percentage=c(fully_vaccinated_percentage,notfully_vaccinated_percentage))
+
+data <- data %>% 
+  arrange(desc(group)) %>%
+  mutate(prop = percentage / sum(data$percentage) *100) %>%
+  mutate(ypos = cumsum(prop)- 0.5*prop )
+
+
+p1 <- ggplot(data, aes(x="", y=prop, fill=group)) +
+  geom_bar(stat="identity", width=1, color="white") +
+  coord_polar("y", start=0) +
+  theme_void() +
+  theme(legend.title=element_blank()) +
+  
+  geom_text(aes(y = ypos, label = percentage), color = "black", size=6) +
+  scale_fill_brewer(palette="Set4")
+
+vaccinated_one_dose_percentage <- max(tunisia_vaccinations$people_vaccinated_per_hundred, na.rm = TRUE)
+notvaccinated_percentage <- round(100-vaccinated_one_dose_percentage, digits=2)
+
+data1 <- data.frame(group=c("Vaccinated","Not vaccinated"), percentage=c(vaccinated_one_dose_percentage,notvaccinated_percentage))
+
+data1 <- data1 %>% 
+  arrange(desc(group)) %>%
+  mutate(prop = percentage / sum(data1$percentage) *100) %>%
+  mutate(ypos = cumsum(prop)- 0.5*prop )
+
+
+p2 <- ggplot(data1, aes(x="", y=prop, fill=group)) +
+  geom_bar(stat="identity", width=1, color="white") +
+  coord_polar("y", start=0) +
+  theme_void() +
+  theme(legend.title=element_blank()) +
+  
+  geom_text(aes(y = ypos, label = percentage), color = "black", size=6) +
+  scale_fill_brewer(palette="Set2")
+
+grid.arrange(p2, p1, ncol=2)
+
+
+```
+
+## Comparison of the progress of vaccinations in Tunisia with other countries
+
+### Comparison with USA, UK and Germany
+
+While the progress of the vaccinations is not terrible, Tunisia is still behind other countries, in this graph we are going to compare the progress with that of big powers like USA, Germany and the United Kingdom.
+
+```{r, out.width="75%", out.height="55%", fig.align="center"} 
+
+target <- c("USA","DEU","GBR","TUN")
+
+target_vaccinations_list <- country_vaccinations %>%
+  filter(iso_code %in% target)
+
+df <- as.data.frame(target_vaccinations_list)
+
+vaccinations_comparison <- ggplot(df, aes(x=date, y=people_fully_vaccinated_per_hundred,color=country)) + 
+  geom_line(data=df[!is.na(df$people_fully_vaccinated_per_hundred),], lwd=1.5) + 
+  theme(legend.title=element_blank()) +
+  ylab("Percentage of people fully vaccinated")
+vaccinations_comparison
+
+```
+We can notice that Tunisia has not only started its vaccination process later than the big powers but also that the progress is a bit more slow going than we observe among the other three. 
+
+### Comparison of Tunisia's vaccination progress with some of its neighbours
+
+
+```{r, fig.align="center", message = FALSE, out.width= "75%", out.height="75%" }
+
+GM <- c("Tunisia","Egypt","Algeria","Morocco")
+
+
+GM_vaccinations <- country_vaccinations %>% 
+  filter(country %in% GM ) 
+
+GM_vaccinations1 <- GM_vaccinations %>%
+  group_by(country) %>%
+  summarize(date,percentage_fully_vaccinated=max(people_fully_vaccinated_per_hundred, na.rm = TRUE),people_vaccinated=max(people_vaccinated, na.rm= TRUE), people_fully_vaccinated=max(people_fully_vaccinated, na.rm =TRUE),percentage_vaccinated=max(people_vaccinated_per_hundred, na.rm = TRUE))
+
+colors <- c("Percentage Vaccinated"="#B1B3B3FF", "Percentage Fully Vaccinated"="#E69A8DFF")
+
+mean_world <- country_vaccinations %>% 
+  group_by(country) %>%
+  summarize(percentage_fully_vaccinated=max(people_fully_vaccinated_per_hundred, na.rm= TRUE), percentage_vaccinated = max(people_vaccinated_per_hundred, na.rm = TRUE)) %>%
+  summarize(country="Global Average", percentage_fully_vaccinated=mean(percentage_fully_vaccinated), percentage_vaccinated=mean(percentage_vaccinated))
+
+ggplot(GM_vaccinations1, aes(x=country) ) + 
+  geom_bar(aes(y=percentage_vaccinated, fill="Percentage Vaccinated"),stat = "identity", position="identity", alpha = 0.6) +
+  geom_bar(aes(y=percentage_fully_vaccinated, fill="Percentage Fully Vaccinated"), stat="identity", position="identity", alpha = 0.8  ) +
+  labs(x="Country",y="%",fill="Legend") +
+  scale_fill_manual(values=colors) + 
+  geom_hline(yintercept = mean_world$percentage_fully_vaccinated, linetype = "dashed") +
+  geom_hline(yintercept = mean_world$percentage_vaccinated, linetype="dashed") + 
+  geom_text(data=data.frame(x=0,y=mean_world$percentage_vaccinated), aes(x, y), label="Global Vaccination Average", vjust=-1, hjust= -0.25)+
+  geom_text(data=data.frame(x=0,y=mean_world$percentage_fully_vaccinated), aes(x, y), label="Global Full Vaccination Average", vjust=-1, hjust= -0.15)
+
+```
+
+Judging by the graph, it looks like Tunisia's progress is better than the global average in terms of number of people vaccinated, and relatively equal to the global average in terms of number of people fully vaccinated.
+
+
+```{r, out.width= "75%", out.height="75%"}
+GM_vaccinations2 <- GM_vaccinations1 %>% 
+  mutate(people_vaccinated=people_vaccinated/1000000)
+
+ggplot(GM_vaccinations2, aes(x=country, y=people_vaccinated)) +
+  geom_point(color="#228b22", size=3) + 
+  geom_segment( aes(x=country, xend=country, y=0, yend=people_vaccinated), color="#228b22", lwd=1.5)+ 
+  coord_flip() +
+   geom_text(aes(label=round(people_vaccinated, digits=3)), position=position_dodge(width=0.9),vjust=-0.05,  hjust=-0.25)+
+  scale_y_continuous(limits=c(0,35)) + 
+  theme_classic() + 
+  theme(axis.line.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text = element_text(color="black"), axis.title.y = element_blank()) +
+  ylab("Total Number of People Vaccinated; one or two doses (in Millions)") 
+
+```
+
+
+
+Looking at the two graphs above, it is clear that although Egypt has a total number of vaccinations of 25.519 million more than Tunisia, the percentage of the vaccinated Egyptian population is less than that of Tunisia, with a difference of more than 25%. This difference is mainly due to the difference in proportion between the populations of these countries, which can be seen in the table below.
+
+```{r tables}
+
+df<-data.frame(Country=GM,
+     Population=c("11.82 million","102.3 million", "43.85 million", "36.91 million"))
+
+kable(df, col.names = c("Country", "Population"), align = "cc", caption = "Table 1.1 The total Population of each country (2020).")
+
+```
+
+## Average vaccination per day of the week
+```{r, fig.align="center", out.width= "75%", out.height="75%"}
+
+tunisia_vaccinations_weekday <- tunisia_vaccinations %>% 
+  mutate(weekday=format(date, format="%A")) %>% 
+  group_by(weekday) %>% 
+  summarize(average_vaccination=round(mean(daily_vaccinations, na.rm=TRUE),digits =2))
+
+
+tunisia_vaccinations_weekday$weekday=c("Sunday","Thursday","Monday","Tuesday","Wednesday","Saturday","Friday")
+
+
+ggplot(tunisia_vaccinations_weekday, aes(x=weekday,y=average_vaccination))+
+  geom_bar(stat="identity", fill="#c21e56") + 
+  geom_text(aes(label=average_vaccination), position=position_dodge(width=0.9), vjust=-0.25) +
+  labs(title="Average Vaccinations per day of the week;Tunisia", y="Amount of Average Vaccinations", x="") +
+  scale_y_continuous(limits=c(0,50000))
+
+
+```
+
+```{r out.width= "75%", fig.align="center", message= FALSE}
+
+
+TC_vaccinations_weekday <- GM_vaccinations %>%
+  filter(country =="Tunisia" | country == "Egypt" | country == "Morocco") %>%
+  mutate(weekday=format(date, format="%A")) %>% 
+  group_by(country,weekday) %>% 
+  summarize(average_vaccination=round(mean(daily_vaccinations, na.rm=TRUE),digits =2)) %>% 
+  mutate(weekday=c("Sunday","Thursday","Monday","Tuesday","Wednesday","Saturday","Friday"))
+
+ggplot(TC_vaccinations_weekday, aes(x=weekday, y=average_vaccination, fill=country)) +
+  labs(title="Average Vaccinations per day of the week; Egypt, Morocco and Tunisia", y="Amount of Average Vaccinations", x="")+
+  geom_bar(stat="identity", position = position_dodge(0.7), width= 1) + 
+  theme(legend.title=element_blank())
+
+  
+```
+
+## Conclusion 
+
+Although the progress in Tunisia is a quite a bit behind big powers such as the United States, Great Britain and Germany, it is worth noting that it is still better than the global average and that it is faring better than some neighboring countries such as Egypt and Algeria. 
+
+## Perspectives
+
+- The remaining proportion that are not vaccinated could be caused by social circumstances that make people refuse the vaccination.
+- The reluctance to vaccinate might change with the obligation of having "Covid-19 Vaccine passport"
+
